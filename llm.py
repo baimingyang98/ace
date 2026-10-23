@@ -6,6 +6,7 @@ llm.py
 This file contains the LLM class for the project.
 
 """
+import os
 import time
 import random
 from datetime import datetime
@@ -74,6 +75,12 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             # Add JSON mode if requested
             if use_json_mode:
                 api_params["response_format"] = {"type": "json_object"}
+
+            # DeepSeek models think by default and then ignore temperature; the paper uses
+            # non-thinking mode, so thinking stays off unless DEEPSEEK_THINKING=enabled
+            if api_provider == "deepseek":
+                thinking = os.getenv("DEEPSEEK_THINKING", "disabled")
+                api_params["extra_body"] = {"thinking": {"type": thinking}}
             call_start = time.time()
             response = active_client.chat.completions.create(**api_params)
             call_end = time.time()
