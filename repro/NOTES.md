@@ -18,6 +18,8 @@ Working notes for the FTEC5660 reproducibility report. Target: Table 2 of the pa
   is still accepted but its requests are served by V4.1-Flash. DeepSeek-V3.1 is not offered.
 - Both current models think by default, and in thinking mode they ignore temperature. `llm.py` now sends
   `thinking: disabled` for the deepseek provider, to match the paper. `DEEPSEEK_THINKING=enabled` turns it on.
+- Model used for the runs: `deepseek-flash` (DeepSeek-V4.1-Flash-1017) for Generator, Reflector and Curator,
+  non-thinking, temperature 0.0, max_tokens 4096.
 - Results are not directly comparable with the paper because the underlying LLM differs.
 
 ## Differences between the paper and the repo defaults
@@ -48,3 +50,9 @@ Working notes for the FTEC5660 reproducibility report. Target: Table 2 of the pa
   (the initial test on all 200 questions) was already saved in `initial_test_results.json`.
   Notebook changes: a failed run now stops the loop instead of starting the next run, `summarize` reads
   crashed runs, and re-running the setup cell no longer deletes `results/`.
+- 2026-10-24: Switched the runs to `deepseek-flash`. The 20 yuan balance ran out halfway through one pro run.
+  Every Generator and Curator call carries the whole playbook, and the playbook grows by about two bullets per
+  question (bullet ids reached 200 at question 100), so a run's input grows roughly with the square of the
+  number of questions. The bullet counters (helpful/harmful) are rewritten inside the playbook after each
+  reflection, which breaks DeepSeek's prefix cache. Estimate, to be checked against the logged tokens: a full
+  online run costs about 60 to 80 yuan with pro and about 15 to 20 yuan with flash, off-peak.
