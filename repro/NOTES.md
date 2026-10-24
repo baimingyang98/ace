@@ -42,3 +42,9 @@ Working notes for the FTEC5660 reproducibility report. Target: Table 2 of the pa
 ## Debug diary
 
 - 2026-10-24: DeepSeek is not a provider in the repo; added it the same way upstream added commonstack (#33).
+- 2026-10-24: Run 1 with `deepseek-v4-pro` stopped after 34 min, at online sample 101 of 200, with
+  HTTP 402 "Insufficient Balance". `llm.py` retries only timeouts, rate limits and 5xx, so the error ends
+  the process. Online mode has no resume, so the run has to start again from sample 1. The base accuracy
+  (the initial test on all 200 questions) was already saved in `initial_test_results.json`.
+  Notebook changes: a failed run now stops the loop instead of starting the next run, `summarize` reads
+  crashed runs, and re-running the setup cell no longer deletes `results/`.
