@@ -70,7 +70,8 @@ class ACE:
             self.bulletpoint_analyzer = BulletpointAnalyzer(
                 curator_client, 
                 curator_model, 
-                max_tokens
+                max_tokens,
+                api_provider=api_provider
             )
             print(f"✓ BulletpointAnalyzer initialized (threshold={bulletpoint_analyzer_threshold})")
         else:

@@ -5,6 +5,7 @@ This component analyzes playbook bulletpoints for similarity and performs
 intelligent deduplication and merging using embeddings and LLM.
 """
 
+import os
 import re
 import numpy as np
 from typing import List, Dict, Tuple, Any, Optional
@@ -73,7 +74,8 @@ class BulletpointAnalyzer:
         client,
         model: str,
         max_tokens: int = 4096,
-        embedding_model_name: str = 'all-mpnet-base-v2'
+        embedding_model_name: str = 'all-mpnet-base-v2',
+        api_provider: Optional[str] = None
     ):
         """
         Initialize the bulletpoint analyzer.
@@ -83,10 +85,12 @@ class BulletpointAnalyzer:
             model: Model name for LLM
             max_tokens: Maximum tokens for LLM responses
             embedding_model_name: Sentence transformer model for embeddings
+            api_provider: API provider name; "deepseek" gets the same thinking switch as llm.py
         """
         self.client = client
         self.model = model
         self.max_tokens = max_tokens
+        self.api_provider = api_provider
         self.embedding_model_name = embedding_model_name
         self.embedding_model = None
         
@@ -232,14 +236,22 @@ Requirements:
 Do NOT include any explanation, just output the merged bulletpoint."""
         
         try:
-            # Call LLM
+            # Call LLM; DeepSeek thinks by default, so it gets the same switch as llm.py
+            extra = {}
+            if self.api_provider == "deepseek":
+                extra["extra_body"] = {"thinking": {"type": os.getenv("DEEPSEEK_THINKING", "disabled")}}
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=self.max_tokens,
-                temperature=0.3
+                temperature=0.3,
+                **extra
             )
-            
+            # merge calls bypass llm.py, so their tokens are printed here for cost accounting
+            usage = getattr(response, "usage", None)
+            if usage:
+                print(f"[ANALYZER] merge call tokens: {usage.prompt_tokens} {usage.completion_tokens}")
+
             if hasattr(response.choices[0].message, 'content'):
                 merged_content = response.choices[0].message.content
             else:
