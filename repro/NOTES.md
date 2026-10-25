@@ -34,6 +34,17 @@ Working notes for the FTEC5660 reproducibility report. Target: Table 2 of the pa
    file order and does not shuffle.
 5. Code version: the repo head (82709de, 2026-08-24) adds batched ACE (ComBEE, May and August 2026), after
    the paper. `--batch_size 1`, the default, keeps the original sequential path.
+6. De-duplication: section 3.2 (grow-and-refine) de-duplicates bullets by semantic similarity, and appendix A.6
+   studies its threshold. In the repo it is the bulletpoint analyzer, which is off unless
+   `--use_bulletpoint_analyzer` is passed, so the default run is ACE without de-duplication. Its merge calls
+   go straight to the client with temperature 0.3, outside `llm.py`. Without `sentence-transformers` and
+   `faiss` it prints a warning and returns the playbook unchanged.
+7. Playbook budget: `--playbook_token_budget` (80,000) is only a number in the Curator prompt; nothing in the
+   code enforces it or prunes the playbook.
+8. "Without GT labels" (`--no_ground_truth`): the Reflector and Curator do not see the correct answer, but the
+   loop still compares each answer with the label (`ace/ace.py` line 478), reflects again only while the
+   answer is wrong, and tells the Reflector "Predicted answer does not match ground truth" or "matches ground
+   truth". A correctness signal from the label therefore remains.
 
 ## Things that can hide errors
 
@@ -56,3 +67,16 @@ Working notes for the FTEC5660 reproducibility report. Target: Table 2 of the pa
   number of questions. The bullet counters (helpful/harmful) are rewritten inside the playbook after each
   reflection, which breaks DeepSeek's prefix cache. Estimate, to be checked against the logged tokens: a full
   online run costs about 60 to 80 yuan with pro and about 15 to 20 yuan with flash, off-peak.
+- 2026-10-24: Baseline done, 3 runs with `deepseek-flash` (commit 528c9b9), about 40 minutes each, no failed
+  or empty calls. Base 73.5 / 72.5 / 71.5, ACE online 78.5 / 79.0 / 81.0. Each run made about 1,250 calls
+  with 8.0 to 8.8M input and about 0.4M output tokens, at most about 10 yuan off-peak, below the estimate.
+  The base accuracy moves between runs although temperature is 0.
+- 2026-10-25: The next day the notebook was on a new kernel and the export cell found no runs under
+  `/content/ace/results` or `/content/ace_pilot/results`, so the per-run files of the baseline (per-question
+  results, window accuracies, call logs) were not downloaded. The notebook output survived; the baseline
+  numbers above come from it. Notebook changes: after each run the
+  small files and a `calls.csv` summary of the call logs are copied to `/content/ace_export` and zipped,
+  `summarize` prints the window accuracies and wrong question indices into the notebook output, and the
+  three runs of a configuration start in parallel.
+- 2026-10-25: For modification A, the bulletpoint analyzer now gets the DeepSeek thinking switch (its merge
+  calls bypass `llm.py`) and prints the tokens of each merge call, so the cost of A includes merging.
