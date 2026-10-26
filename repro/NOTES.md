@@ -80,3 +80,17 @@ Working notes for the FTEC5660 reproducibility report. Target: Table 2 of the pa
   three runs of a configuration start in parallel.
 - 2026-10-25: For modification A, the bulletpoint analyzer now gets the DeepSeek thinking switch (its merge
   calls bypass `llm.py`) and prints the tokens of each merge call, so the cost of A includes merging.
+- 2026-10-25: Ablation C done (commit 99a2e51), 3 parallel runs of about 50 minutes, no failed calls.
+  Base 71.0 / 71.0 / 72.0, ACE online 82.5 / 80.0 / 79.5, gain +9.3 +/- 2.0 points (baseline with labels:
+  +7.0 +/- 2.3). Paired by question, ACE fixed 26 / 27 / 25 questions and broke 3 / 9 / 10 (exact McNemar
+  p = 1.5e-5 / 0.004 / 0.017). Without labels each run made more Reflector calls (268 to 275 against about
+  207) and used 8.9 to 11.2M input tokens. Questions 84 and 176 (both unemployment rate) are right in all
+  three base runs and wrong in all three ACE runs. 25 questions are wrong in every base and every ACE run;
+  some look like convention issues, e.g. question 2 (dividend yield 0.90 / 18, label 0.05, not 5.00).
+- 2026-10-25: Modification A ran for about 4 hours (about 30 yuan) without finishing and was stopped. From
+  the code: `BulletpointAnalyzer.analyze()` runs after every Curator step and re-encodes every bullet with
+  all-mpnet-base-v2 (110M parameters) on the CPU, so the work grows with the playbook, and three runs in
+  parallel competed for the same CPU. Interrupting the cell does not stop the run processes. Changes: the
+  analyzer caches embeddings by bullet text and encodes only new or edited bullets, A runs with one thread
+  per process, an interrupted group now terminates its runs, and a notebook cell lists leftover processes
+  and the time from each Curator call to the next Generator call.
