@@ -93,7 +93,10 @@ class BulletpointAnalyzer:
         self.api_provider = api_provider
         self.embedding_model_name = embedding_model_name
         self.embedding_model = None
-        
+        # analyze() runs after every Curator step on the whole playbook; caching by bullet text means
+        # only new or edited bullets are encoded, instead of every bullet at every step
+        self._embedding_cache = {}
+
         if not DEDUP_AVAILABLE:
             print("⚠️  Bulletpoint analyzer initialized but dependencies not available")
     
@@ -144,12 +147,15 @@ class BulletpointAnalyzer:
         self._load_embedding_model()
         
         contents = [bullet['content'] for bullet in bullets]
-        embeddings = self.embedding_model.encode(contents, convert_to_numpy=True, show_progress_bar=False)
-        
-        # Normalize for cosine similarity
-        faiss.normalize_L2(embeddings)
-        
-        return embeddings
+        new = [c for c in dict.fromkeys(contents) if c not in self._embedding_cache]
+        if new:
+            new_embeddings = self.embedding_model.encode(new, convert_to_numpy=True, show_progress_bar=False)
+            new_embeddings = np.ascontiguousarray(new_embeddings, dtype=np.float32)
+            # Normalize for cosine similarity
+            faiss.normalize_L2(new_embeddings)
+            self._embedding_cache.update(zip(new, new_embeddings))
+
+        return np.stack([self._embedding_cache[c] for c in contents])
     
     def _find_similar_groups(
         self,
